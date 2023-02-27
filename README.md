@@ -29,3 +29,23 @@ The model depolyment process can be referred from the codebase in `model_deploym
 
 * `model_deployment_app.main`: This is the main process about how to depolyment models by `FastAPI`.
 * `model_deployment_app.model`: This module is used for converting PyTorch models into scikit-learn-based models, which can be deployed then.
+
+## Usage
+
+Since this repo is designed for GCP, here is the workflow example when using GCP,
+
+1. Train a ML or DL model.
+2. Pickle the model and upload to GCS.
+3. Local test by the commandline, 
+   ```
+   python model_deployment_app/main.py
+   ```
+4. Build the base image and push to the cloud container registry by the commandline, 
+   ```
+   make docker-base
+   ```
+   Please note that to replace the `CONTAINER_REGISTRY` with your container registry url. If the functionalities in codebase are modified, please update the app version by,
+   ```
+   poetry version ...
+   ```
+   which can be referred from here, https://python-poetry.org/docs/cli/#version.
