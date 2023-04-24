@@ -1,0 +1,54 @@
+# Default values for CHART_NAME.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 2
+
+image:
+  repository: CONTAINER_REGISTRY/model_deployment_app
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+service:
+  type: ClusterIP
+  port: 50000
+
+ingress:
+  enabled: true
+  className: ""
+  annotations: 
+    # kubernetes.io/ingress.class: nginx # for stage
+    kubernetes.io/ingress.class: nginx-ingress-internal # for live
+    kubernetes.io/ingress.allow-http: "false"
+    cert-manager.io/cluster-issuer: vault
+  hosts:
+    host: HOST_URL # for live
+    paths:
+      path: /CHART_NAME
+      pathType: ImplementationSpecific
+
+config:
+  # configuration
+  logLevel: info
+  modelType: pkl
+  job: regression
+  model: 
+    # the model on GCS
+    method: GCS
+    projectName: PROJECT
+    bucketName: BUCKET
+    blobDir: BLOB
+  inputSize: INPUT_DIM
+
+resources:
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  limits:
+    cpu: 25m
+    memory: 160Mi
+  requests:
+    cpu: 10m
+    memory: 100Mi
