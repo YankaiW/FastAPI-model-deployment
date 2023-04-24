@@ -1,51 +1,119 @@
-# FastAPI Model Deployment
+# Model Deployment Application
 
 ## Contents
 
-- [Introduction](#introduction)
-- [Codebase](#codebase)
+  - [Introduction](#introduction)
+  - [Requirements](#requirements)
+  - [Method](#method)
+  - [Output](#output)
+  - [Usage](#usage)
+    - [Update test image](#update-test-image)
+    - [Update base image](#update-base-image)
+    - [Model deployment](#model-deployment)
 
 ## Introduction
 
-In the machine learning engineering part for a data science project, the most important work is to deploy the trained ML or DL models. Then in production or in real-time prediction, the predictions can be requested from the deployed models via endpoints or something else. There are 2 reasons to deploy trained models, 
+This application is used for ML/DL model deployment in k8s cluster, which can be used for classification or regression problems in production. 
 
-* In production, with the larger training set, the trained model size can be larger accordingly(e.g. Tree-based models), which could use a lot of memory resource and influence the system running if it is ingrated with the main system.
-* For stable development, it is better to keep systems/environments independent and clean, for model deployment environments and other systems.
+## Requirements
 
-Note that there are already different cloud-based pipelines that can help us deploy models, e.g. Vertex AI on GCP, but there are still limitations, 
+* Cloud based k8s cluster
+* Cloud based storage
+* Cloud based container registry
 
-* For classification problems, the pipelines there can only output a final predicted class, not the probability(except TensorFlow classification models). Man can also define some customized models to output probabilities but more services or machines need to bought there, which could lead to more cost. 
-* For those cloud-based model deployment pipelines, the model structure objects are limited, normally only for scikit-learn model, xgboost model and TensorFlow model, which could limit the work possibilities in production.
+## Method
 
-Thus, in production the trained model needs to be deployed, and better in a customized way.
+Use `FastAPI` to deploy model in k8s pod, which will give us an api that can be requested from internal environment. 
 
-In this repo, a model deployment method by `FastAPI`, working with docker container and k8s,  is introduced, which can give us an endpoint url where the prediction can be requested. Since this method has to work with k8s, this can be depolyed on any cloud platforms that have cloud k8s clusters, or locally with `minikube`.
+## Output
 
-This repo is compatible with all customized or predefined models, including PyTorch models. And currently this repo is designed only for GCP, since the similarity between different cloud platforms, this method can be modified easily for other platforms.
-
-## Codebase
-
-The model depolyment process can be referred from the codebase in `model_deployment_app` by `FastAPI`, 
-
-* `model_deployment_app.main`: This is the main process about how to depolyment models by `FastAPI`.
-* `model_deployment_app.model`: This module is used for converting PyTorch models into scikit-learn-based models, which can be deployed then.
+* For classification: return predicted probabilities
+* For regression: return predictions
 
 ## Usage
 
-Since this repo is designed for GCP, here is the workflow example when using GCP,
+### Update test image
 
-1. Train a ML or DL model.
-2. Pickle the model and upload to GCS.
-3. Local test by the commandline, 
+Once the dependencies are updated in the app, the test image needs to be updated by,
+```
+make docker-ci-test
+```
+
+### Update base image
+
+1. Checkout to the new branch and make the change.
+2. Update the app version in `pyproject.toml` by the commandline
    ```
-   python model_deployment_app/main.py
+   poetry version NAME
    ```
-4. Build the base image and push to the cloud container registry by the commandline, 
+   where can be refered from here, https://python-poetry.org/docs/cli/#version.
+3. Push the branch to remote and create the MR.
+4. Merge the MR and rebase on the new change.
+5. Push the new base image to GCR, by the commandline
    ```
    make docker-base
    ```
-   Please note that to replace the `CONTAINER_REGISTRY` with your container registry url. If the functionalities in codebase are modified, please update the app version by,
+
+### Model deployment
+
+1. Train the ML model and save it with `joblib` or `pickle`. 
+   
+   Note that all models need to be saved in the format inheriting from 
+   `sklearn.base.BaseEstimator`. And for DL models from `PyTorch`, they can be
+   converted to this model format by the class `model_deployment_app.model.PyTorchEstimator`.
+2. Upload model to the cloud based storage.
+3. Create new helm chart in the folder `k8s_dev` by `helm`, e.g.
    ```
-   poetry version ...
+   helm create NEWMODEL
    ```
-   which can be referred from here, https://python-poetry.org/docs/cli/#version.
+4. Remove the useless deployment files, 
+   1. `k8s_dev/NEWMODEL/templates/hpa.yaml`
+   2. `k8s_dev/NEWMODEL/templates/serviceaccount.yaml`
+5. Overwrite helm chart files.
+   1. Set values in `values.yaml` for k8s deployment, including the sections, 
+      * replicaCount: The number of pods for the model deployment.
+      * image: The image location.
+      * service: The service configuration, note that the port needs to be selected carefully.
+      * ingress: The ingress configuration for request url. 
+         1. The request url of different models for different projects should be distinguished by `ingress.hosts.paths.path`.
+      * config: The configuration for model deployment implementation by `FastAPI`, having the following structure,
+         ```
+         config:
+            # configuration
+            modelType: # pkl or joblib
+            job: # regression or classification
+            model: 
+               # the model on GCS
+               method: GCS
+               projectName: PROJECT
+               bucketName: BUCKET
+               blobDir: BLOB
+            inputSize: INPUT_DIM
+         ```
+   2. Update 
+      * `k8s_dev/NEWMODEL/templates/deployment.yaml`
+      * `k8s_dev/NEWMODEL/service.yaml`
+      * `k8s_dev/NEWMODEL/templates/ingress.yaml`
+      * (`k8s_dev/NEWMODEL/templates/NOTES.txt` if necessary)
+      
+      according to the values in `k8s_dev/NEWMODEL/values.yaml`
+   3. Create `k8s_dev/NEWMODEL/templates/configmap.yaml` to invoke the FastAPI
+      configuration values.
+   4. Set up helm chart version and app version in `k8s_dev/NEWMODEL/Chart.yaml`,
+      * chart version needs to be increased when there are changes in k8s deployment files.
+      * app version is the version of latest or specified model deployment app.
+6. Update or add the corresponding commandlines in `Makefile`.
+7. Deploy the model by,
+   ```
+   make k8s-deploy
+   ```
+8. Remove the model deployment by,
+   ```
+   make k8s-undeploy
+   ```
+
+Note that, 
+* When we implement one model deployment for some test, it is better to keep 
+  related k8s files in a branch, once we decide to go live with the new model,
+  merge the branch to master and give a formal model deployment name.
+* DL models from `PyTorch` are also available with this model deployment tool, but the models need to be pickled in the format, `model_deployment_app.model.PyTorchEstimator`.
