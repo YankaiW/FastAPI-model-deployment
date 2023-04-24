@@ -1,7 +1,6 @@
 """The main module to do the prediction work
 """
 
-import logging
 import os
 import pickle
 from tempfile import TemporaryFile
@@ -16,16 +15,11 @@ from sklearn import base
 
 from model_deployment_app.model import *  # noqa: F401, F403
 
-# define logger
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("Process")
-
 # read configuration file
 with open("/etc/config/config.yaml", "r") as f:
     CONFIG = yaml.safe_load(f)
 
 # read model
-logger.info("Loading pre-trained model.")
 if CONFIG["model"]["method"] == "LOCAL":
     WORKDIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     MODEL: base.BaseEstimator = joblib.load(
@@ -70,10 +64,11 @@ def predict(
         the prediction result
     """
     # feature matrix validation
-    assert len(feature_matrix[0]) == CONFIG["input_size"]
+    assert (
+        len(feature_matrix[0]) == CONFIG["input_size"]
+    ), f"{len(feature_matrix[0])} != {CONFIG['input_size']}"
 
     # prediction
-    logger.info("Single prediction starts")
     if CONFIG["job"] == "classification":
         pred = MODEL.predict_proba(feature_matrix)[:, -1].tolist()
     elif CONFIG["job"] == "regression":
@@ -84,4 +79,6 @@ def predict(
 
 
 if __name__ == "__main__":
-    uvicorn.run(pred_app, host="0.0.0.0", port=CONFIG["port"])
+    uvicorn.run(
+        pred_app, host="0.0.0.0", port=CONFIG["port"], log_level=CONFIG["log_level"]
+    )
