@@ -112,6 +112,8 @@ class PyTorchEstimator(base.BaseEstimator, base.RegressorMixin):
 
 # DNN network for regression
 class DNNNetRegressor(nn.Module):
+    """The class to define a 3-layer linear Pytorch regression model"""
+
     def __init__(
         self,
         input_size: int,
@@ -192,6 +194,8 @@ class CNNNetRegressor(nn.Module):
 
 # DNN network for classification
 class DNNNetClassifier(nn.Module):
+    """The class to define a 3-layer linear Pytorch classification model"""
+
     def __init__(
         self,
         input_size: int,
