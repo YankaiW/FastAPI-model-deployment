@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "model-deployment-app"
-version = "2.2.1"
+version = "2.3.0"
 description = ""
 authors = ["YankaiW <wyk.uestc@gmail.com>"]
 

@@ -1,4 +1,10 @@
 """The main module to do the prediction work
+
+The workflow is,
+-> Load the configuration parameters
+-> Load the trained model
+-> Create FastAPI instance
+-> Define path function for prediction
 """
 
 import os
@@ -21,11 +27,15 @@ with open("/etc/config/config.yaml", "r") as f:
 
 # read model
 if CONFIG["model"]["method"] == "LOCAL":
+    # The model saved on local
     WORKDIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     MODEL: base.BaseEstimator = joblib.load(
         os.path.join(WORKDIR, CONFIG["model"]["model_dir"])
     )
 elif CONFIG["model"]["method"] == "GCS":
+    # The model saved on Google Cloud Storage
+    # Note that when deployment, the service account selected in Kubernetes
+    # files should be used for credentials
     storage_client = storage.Client(
         project=CONFIG["model"]["project_name"],
     )
@@ -48,7 +58,7 @@ pred_app = FastAPI()
 
 
 @pred_app.post(CONFIG["path"])
-def predict(
+async def predict(
     feature_matrix: List[List[float]] = Body(..., title="The feature matrix")
 ) -> Dict[str, str]:
     """Predicts the optimal start price by a trained model
@@ -70,8 +80,10 @@ def predict(
 
     # prediction
     if CONFIG["job"] == "classification":
+        # predict probabilities
         pred = MODEL.predict_proba(feature_matrix)[:, -1].tolist()
     elif CONFIG["job"] == "regression":
+        # predict regressive values
         pred = MODEL.predict(feature_matrix).tolist()
     else:
         raise NameError("Unknown job name or model type.")
