@@ -54,6 +54,7 @@ This application is used for ML/DL model deployment by `FastAPI`, `Docker` and `
    Then remove the useless deployment files, 
       1. `k8s_dev/NEWMODEL/templates/hpa.yaml`
       2. `k8s_dev/NEWMODEL/templates/serviceaccount.yaml`
+   
    Note that the service account should be already created for credentials.
 2. Write or modify helm chart files.
    1. Set values in `values.yaml` for k8s deployment, including the sections, 
@@ -61,6 +62,7 @@ This application is used for ML/DL model deployment by `FastAPI`, `Docker` and `
       * image: The docker image information.
       * service: The service configuration used to generate endpoint APIs, note that the port needs to be selected carefully for different models.
       * ingress(if in used): The ingress configuration for prediction request URL. 
+        
         The request URL for different models should be distinguished by `ingress.hosts.paths.path`, which means that it is possible to use one host URL for multi model deployments.
       * config: The configuration for model deployment implementation by `FastAPI`, having the following structure,
          ```
