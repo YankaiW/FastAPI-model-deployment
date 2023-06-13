@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "CHART_NAME.fullname" . }}
-  namespace: datascience
+  namespace: NAME_SPACE
   labels:
     {{- include "CHART_NAME.labels" . | nindent 4 }}
 spec:
@@ -15,7 +15,7 @@ spec:
       labels:
         {{- include "CHART_NAME.selectorLabels" . | nindent 8 }}
     spec:
-      serviceAccountName: datascience
+      serviceAccountName: SERVICE_ACCOUNT
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"

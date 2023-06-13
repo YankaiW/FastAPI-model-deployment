@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata: 
   name: {{ .Release.Name }}-config
-  namespace: datascience
+  namespace: NAME_SPACE
   labels:
     name: CONFIGMAP_NAME
 data:

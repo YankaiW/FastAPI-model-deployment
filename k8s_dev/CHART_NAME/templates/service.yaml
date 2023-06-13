@@ -4,7 +4,7 @@ metadata:
   name: {{ include "CHART_NAME.fullname" . }}-svc
   labels:
     {{- include "CHART_NAME.labels" . | nindent 4 }}
-  namespace: datascience
+  namespace: NAME_SPACE
 spec:
   type: {{ .Values.service.type }}
   ports:
