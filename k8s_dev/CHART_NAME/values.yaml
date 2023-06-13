@@ -12,18 +12,18 @@ image:
 
 service:
   type: ClusterIP
-  port: 50000
+  port: 10000
 
 ingress:
   enabled: true
   className: ""
   annotations: 
-    # kubernetes.io/ingress.class: nginx # for stage
-    kubernetes.io/ingress.class: nginx-ingress-internal # for live
+    kubernetes.io/ingress.class: # ingress class name
     kubernetes.io/ingress.allow-http: "false"
-    cert-manager.io/cluster-issuer: vault
+    # for credentials if necessary, e.g. vault
+    # cert-manager.io/cluster-issuer: CREDENTIALS
   hosts:
-    host: HOST_URL # for live
+    host: HOST_URL
     paths:
       path: /CHART_NAME
       pathType: ImplementationSpecific
